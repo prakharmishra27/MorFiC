@@ -1,0 +1,239 @@
+---
+import '../styles/global.css';
+import { site } from '../data/site';
+import Icon from '../components/Icon.astro';
+import VideoCard from '../components/VideoCard.astro';
+import Figure from '../components/Figure.astro';
+
+const base = import.meta.env.BASE_URL;
+const asset = (path: string) => `${base}${path}`;
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="MorFiC improves zero-shot cross-morphology quadruped transfer by fixing critic value miscalibration with morphology-aware multiplicative conditioning." />
+  <meta name="theme-color" content="#081513" />
+  <meta property="og:title" content={site.title} />
+  <meta property="og:description" content="One source robot. Seven simulated morphologies. Zero-shot transfer to real Go1 and Go2 hardware." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content={asset('media/figures/morphology-collage.png')} />
+  <title>{site.title}</title>
+</head>
+<body>
+  <header class="hero" id="top">
+    <video class="hero-media" src={asset('media/videos/hero-montage.mp4')} poster={asset('media/figures/hero-poster.jpg')} muted autoplay loop playsinline preload="metadata"></video>
+    <div class="hero-shade"></div>
+    <nav class="nav shell" aria-label="Primary">
+      <a class="brand" href="#top">MorFiC</a>
+      <div class="nav-links">
+        <a href="#method">Method</a>
+        <a href="#transfer">Transfer</a>
+        <a href="#hardware">Hardware</a>
+        <a href="#results">Results</a>
+        <a href="#coverage">Coverage</a>
+      </div>
+    </nav>
+
+    <div class="hero-content shell">
+      <p class="eyebrow">CoRL 2026 · Austin, Texas</p>
+      <h1><span>MorFiC</span><br />Fixing Value Miscalibration for Zero-Shot Quadruped Transfer</h1>
+      <p class="hero-deck">Efficient zero-shot cross-morphology locomotion by fixing critic miscalibration: MorFiC trains on one source quadruped in about two hours, then transfers the same policy to unseen robot morphologies — including real Go1 and Go2 hardware — without target-specific fine-tuning.</p>
+
+      <div class="authors" aria-label="Authors">
+        {site.authors.map((author, i) => (
+          <span>
+            {author.href ? <a href={author.href} target="_blank" rel="noreferrer">{author.name}</a> : author.name}<sup>{author.affiliation}</sup>{i < site.authors.length - 1 ? ',' : ''}
+          </span>
+        ))}
+      </div>
+      <div class="affiliations">
+        <span><sup>1</sup>{site.affiliations[0]}</span>
+        <span><sup>2</sup>{site.affiliations[1]}</span>
+      </div>
+
+      <div class="hero-actions">
+        <a class="button primary" href={asset(site.links.paper)} target="_blank"><Icon name="paper" />Paper</a>
+        <a class="button" href={site.links.arxiv} target="_blank" rel="noreferrer"><Icon name="link" />arXiv</a>
+        <span class="button disabled" aria-disabled="true" title="Code release coming soon"><Icon name="code" />Code — Coming Soon</span>
+        <a class="button" href="#video"><Icon name="video" />Video</a>
+        <a class="button" href={site.links.coverage} target="_blank" rel="noreferrer"><Icon name="link" />UMD Coverage</a>
+        <a class="button subtle" href={asset(site.links.appendix)} target="_blank"><Icon name="paper" />Appendix</a>
+      </div>
+    </div>
+    <a class="scroll-cue" href="#overview" aria-label="Scroll to overview"><Icon name="chevron" /></a>
+  </header>
+
+  <main>
+    <section class="section intro" id="overview">
+      <div class="shell narrow center">
+        <p class="section-kicker">The result in one glance</p>
+        <h2>One policy. Different bodies.</h2>
+        <p class="lede">MorFiC takes a different route to generalization: improve the value function so a policy trained on one source robot can transfer efficiently, rather than relying on target-specific retraining or very large multi-embodiment training budgets.</p>
+      </div>
+      <div class="stats shell">
+        <div class="stat"><strong>1</strong><span>source robot</span></div>
+        <div class="stat"><strong>7</strong><span>simulated morphologies</span></div>
+        <div class="stat"><strong>2</strong><span>real robot platforms</span></div>
+        <div class="stat"><strong>≈2h</strong><span>single-source training</span></div>
+      </div>
+      <div class="shell efficiency-strap">
+        <span class="efficiency-tag">Efficient generalization</span>
+        <p><strong>Not brute-force scaling.</strong> MorFiC targets a specific actor–critic failure mode — value miscalibration across bodies — enabling competitive zero-shot transfer with a compact single-source training setup.</p>
+      </div>
+      <div class="shell wide top-video">
+        <VideoCard src="media/videos/seven-morphologies.mp4" title="Zero-shot cross-morphology transfer" subtitle="A single learned policy evaluated across seven robot morphologies in simulation." autoplay={true} />
+      </div>
+    </section>
+
+    <section class="section problem-section">
+      <div class="shell split text-visual">
+        <div class="copy-block">
+          <p class="section-kicker">The diagnosis</p>
+          <h2>Why does zero-shot transfer break?</h2>
+          <p>Across robot morphologies, the same observed state can lead to very different future returns because mass, kinematics, joint limits, and actuation change the underlying dynamics.</p>
+          <p>A shared critic is therefore pushed toward averaging incompatible value targets. That value bias flows directly into PPO advantage estimates — and can change the direction of policy updates.</p>
+          <div class="callout">
+            <span class="callout-mark">V</span>
+            <p><strong>The core idea:</strong> cross-morphology generalization is not only a policy representation problem. The value function must also stay calibrated as the body changes.</p>
+          </div>
+        </div>
+        <Figure src="media/figures/critic-calibration-ppo.png" alt="Critic calibration under morphology shift for PPO variants" caption="Explained variance across target morphologies. Higher is better." />
+      </div>
+    </section>
+
+    <section class="section method-section" id="method">
+      <div class="shell narrow center">
+        <p class="section-kicker">Method</p>
+        <h2>Condition the critic multiplicatively.</h2>
+        <p class="lede">MorFiC encodes a robot morphology descriptor into a latent representation shared by the actor and critic. The critic uses morphology-aware multiplicative modulation, allowing the value landscape itself to change with the embodiment instead of treating morphology as a weak additive feature.</p>
+      </div>
+      <div class="shell wide figure-panel">
+        <Figure src="media/figures/morfic-architecture.png" alt="MorFiC architecture showing morphology latent conditioning the actor and critic" caption="MorFiC architecture. A morphology latent modulates the critic through multiplicative conditioning while also conditioning the actor." />
+      </div>
+      <div class="principles shell">
+        <div class="principle"><span>01</span><h3>Sample morphology</h3><p>Physical and control parameters are randomized around the source robot during training.</p></div>
+        <div class="principle"><span>02</span><h3>Encode the body</h3><p>A lightweight encoder maps the morphology descriptor to a shared latent representation.</p></div>
+        <div class="principle"><span>03</span><h3>Modulate value</h3><p>Multiplicative critic conditioning captures morphology-dependent value landscapes and improves advantage calibration.</p></div>
+      </div>
+    </section>
+
+    <section class="section transfer-section" id="transfer">
+      <div class="shell section-head">
+        <div>
+          <p class="section-kicker">Cross-morphology transfer</p>
+          <h2>Seven bodies, zero target-robot training.</h2>
+        </div>
+        <p>Evaluation spans Go2, Go1, A1, AlienGo, Cheetah, ANYmal, and B1. Performance remains strongest near the source morphology and degrades gracefully as the embodiment moves farther out of distribution.</p>
+      </div>
+      <div class="shell wide media-grid transfer-grid">
+        <VideoCard src="media/videos/seven-morphologies.mp4" title="Seven simulated quadrupeds" subtitle="Same learned policy, unseen target morphologies." autoplay={true} />
+        <Figure src="media/figures/morphology-distance.png" alt="Mean forward velocity versus normalized morphology distance from Go2" caption="Morphology-distance analysis: MorFiC preserves stronger locomotion as robot morphology shifts away from the training source." />
+      </div>
+    </section>
+
+    <section class="section hardware-section" id="hardware">
+      <div class="shell narrow center light-text">
+        <p class="section-kicker">Real hardware</p>
+        <h2>Same policy weights. Go1 and Go2.</h2>
+        <p class="lede">MorFiC transfers from simulation to two Unitree platforms without target-specific fine-tuning, reaching approximately 1.4–1.7 m/s on Go1 and 1.1–1.3 m/s on Go2.</p>
+      </div>
+      <div class="shell wide hardware-grid">
+        <VideoCard src="media/videos/hardware-go1-go2.mp4" title="Zero-shot hardware deployment" subtitle="Indoor and outdoor runs on Go1 and Go2." autoplay={true} />
+        <VideoCard src="media/videos/perturbation-recovery.mp4" title="Perturbation recovery" subtitle="Push disturbances on real hardware." autoplay={true} />
+      </div>
+    </section>
+
+    <section class="section results-section" id="results">
+      <div class="shell section-head">
+        <div>
+          <p class="section-kicker">Efficiency + evidence</p>
+          <h2>Generalization without brute-force compute.</h2>
+        </div>
+        <p>MorFiC trains on a single source embodiment in roughly two hours while retaining strong zero-shot transfer. The critic diagnostics help explain why: better value calibration yields more reliable advantages and policy updates across morphology shift.</p>
+      </div>
+      <div class="shell results-grid">
+        <Figure src="media/figures/critic-calibration-external.png" alt="External baselines and critic calibration under morphology shift" caption="Critic calibration across external baselines and target morphologies." />
+        <Figure src="media/figures/compute-efficiency.png" alt="Training efficiency versus external baselines" caption="MorFiC trains on one source embodiment in roughly two hours, versus substantially larger training budgets reported by scaling baselines." />
+      </div>
+      <div class="shell highlight-row">
+        <div class="result-highlight"><strong>1.98 m/s</strong><span>AlienGo forward velocity</span><small>vs. additive PPO variants below 0.65 m/s in the reported comparison</small></div>
+        <div class="result-highlight"><strong>~5×</strong><span>B1 speed gain</span><small>relative improvement reported against morphology-conditioned PPO baseline</small></div>
+        <div class="result-highlight"><strong>0</strong><span>target fine-tuning</span><small>for the reported Go1 and Go2 hardware deployments</small></div>
+      </div>
+    </section>
+
+    <section class="section video-section" id="video">
+      <div class="shell narrow center">
+        <p class="section-kicker">Full overview</p>
+        <h2>MorFiC in 2 minutes 48 seconds.</h2>
+        <p class="lede">The complete supplementary overview: motivation, method, diagnostics, simulation transfer, hardware deployment, and limitations.</p>
+      </div>
+      <div class="shell wide full-video">
+        <VideoCard src="media/videos/full-overview.mp4" title="MorFiC supplementary video" loop={false} />
+      </div>
+    </section>
+
+    <section class="section limitations-section">
+      <div class="shell split">
+        <div class="copy-block">
+          <p class="section-kicker">Stress tests + limitations</p>
+          <h2>Where transfer still gets hard.</h2>
+          <p>Performance falls as morphology moves far outside the training distribution. Real-world deployment is also sensitive to latency, state-estimation drift, and contact mismatch. The accompanying reel intentionally starts with failure cases, then shows additional successful hardware runs to give a fuller picture of deployment behavior.</p>
+          <a class="text-link" href={asset(site.links.appendix)} target="_blank">Read the appendix →</a>
+        </div>
+        <VideoCard src="media/videos/failure-modes.mp4" title="Stress tests, failures & additional hardware runs" subtitle="Failure cases first, followed by additional successful runs." loop={false} />
+      </div>
+    </section>
+
+    <section class="section coverage-section" id="coverage">
+      <div class="shell coverage-card">
+        <div>
+          <p class="section-kicker">News & coverage</p>
+          <h2>One Robot, Many Bodies.</h2>
+          <p class="coverage-deck">The University of Maryland Institute for Advanced Computer Studies profiled MorFiC, its single-source training setup, critic-miscalibration diagnosis, and zero-shot Go1/Go2 deployment.</p>
+          <p class="coverage-meta">UMIACS · September 18, 2026</p>
+        </div>
+        <a class="coverage-link" href={site.links.coverage} target="_blank" rel="noreferrer">
+          <span>Read the UMD feature</span>
+          <strong>One Robot, Many Bodies: New System Helps Four-Legged Robots Adapt ↗</strong>
+        </a>
+      </div>
+    </section>
+
+    <section class="section citation-section" id="citation">
+      <div class="shell citation-wrap">
+        <div>
+          <p class="section-kicker">Citation</p>
+          <h2>Use MorFiC in your work.</h2>
+          <p>If you find the method or diagnostics useful, please cite the paper.</p>
+        </div>
+        <div class="bib-card">
+          <button id="copy-bib" class="copy-button" type="button" data-copy={site.bibtex}><Icon name="copy" /><span>Copy BibTeX</span></button>
+          <pre><code>{site.bibtex}</code></pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="shell footer-inner">
+      <span>MorFiC · CoRL 2026</span>
+      <span>Questions about MorFiC? <a href={site.links.contact}>{site.contactEmail}</a></span>
+      <a href="#top">Back to top ↑</a>
+    </div>
+  </footer>
+
+  <script>
+    const copy = document.querySelector('#copy-bib');
+    copy?.addEventListener('click', async () => {
+      const text = copy.getAttribute('data-copy') || '';
+      await navigator.clipboard.writeText(text);
+      const label = copy.querySelector('span');
+      if (label) label.textContent = 'Copied';
+      setTimeout(() => { if (label) label.textContent = 'Copy BibTeX'; }, 1600);
+    });
+  </script>
+</body>
+</html>

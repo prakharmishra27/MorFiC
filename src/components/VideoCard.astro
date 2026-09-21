@@ -1,0 +1,24 @@
+---
+const { src, title, subtitle, poster, autoplay = false, loop = true, class: className = '' } = Astro.props;
+const base = import.meta.env.BASE_URL;
+---
+<article class={`video-card ${className}`}>
+  <div class="video-frame">
+    <video
+      src={`${base}${src}`}
+      poster={poster ? `${base}${poster}` : undefined}
+      muted={autoplay}
+      autoplay={autoplay}
+      loop={loop}
+      playsinline
+      controls={!autoplay}
+      preload={autoplay ? 'metadata' : 'none'}
+    ></video>
+  </div>
+  {(title || subtitle) && (
+    <div class="video-caption">
+      {title && <strong>{title}</strong>}
+      {subtitle && <span>{subtitle}</span>}
+    </div>
+  )}
+</article>
